@@ -54,6 +54,13 @@
         button.start-btn:hover {
             background: #3B7A9E;
         }
+        select {
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
         #canvas {
             display: block;
             margin: 20px auto;
@@ -94,6 +101,7 @@
     </header>
 
     <main>
+        <select id="camera-select"></select>
         <button class="start-btn" onclick="init()">Start Yoga Detection</button>
         <div><canvas id="canvas"></canvas></div>
         <div id="label-container">Detected Asana will appear here</div>
@@ -109,7 +117,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
     <script>
         const URL = "./my_model/";
-        let model, webcam, ctx, labelContainer, maxPredictions;
+        let model, webcam, ctx, labelContainer, maxPredictions, currentStream;
 
         async function init() {
             const modelURL = URL + "model.json";
@@ -121,9 +129,18 @@
 
                 const size = 300;
                 const flip = true;
+                const cameraSelect = document.getElementById("camera-select");
+                const videoDevices = await getVideoDevices();
+                videoDevices.forEach((device) => {
+                    const option = document.createElement("option");
+                    option.value = device.deviceId;
+                    option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                    cameraSelect.add(option);
+                });
+
                 webcam = new tmPose.Webcam(size, size, flip);
-                await webcam.setup();
-                await webcam.play();
+                await setCamera(cameraSelect.value);
+
                 window.requestAnimationFrame(loop);
 
                 const canvas = document.getElementById("canvas");
@@ -131,10 +148,30 @@
                 canvas.height = size;
                 ctx = canvas.getContext("2d");
                 labelContainer = document.getElementById("label-container");
+
+                cameraSelect.addEventListener("change", async () => {
+                    await setCamera(cameraSelect.value);
+                });
             } catch (error) {
                 console.error("Error loading model or setting up webcam:", error);
                 alert("Error loading model. Check console for details.");
             }
+        }
+
+        async function getVideoDevices() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return devices.filter((device) => device.kind === "videoinput");
+        }
+
+        async function setCamera(deviceId) {
+            if (currentStream) {
+                currentStream.getTracks().forEach((track) => track.stop());
+            }
+            currentStream = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: { exact: deviceId } },
+            });
+            webcam.stream = currentStream;
+            await webcam.play();
         }
 
         async function loop() {

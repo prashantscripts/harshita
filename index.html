@@ -14,21 +14,25 @@
             flex-direction: column;
             align-items: center;
         }
+
         header {
             width: 100%;
             background: linear-gradient(135deg, #E8F1F2, #C2E7D9);
-            padding: 20px 0;
+            padding: 10px 0; /* Adjust padding for mobile */
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
         header img {
-            max-height: 150px;
+            max-height: 120px; /* Scaled for smaller screens */
+            height: auto; /* Responsive scaling */
             display: block;
             margin: 0 auto;
         }
+
         main {
             width: 90%;
             max-width: 800px;
@@ -38,6 +42,7 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             padding: 20px;
         }
+
         button.start-btn {
             width: 100%;
             padding: 15px 20px;
@@ -51,33 +56,31 @@
             margin-bottom: 20px;
             transition: background 0.3s ease;
         }
+
         button.start-btn:hover {
             background: #3B7A9E;
         }
-        select {
-            margin-bottom: 20px;
-            padding: 10px;
-            font-size: 1rem;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
+
         #canvas {
             display: block;
             margin: 20px auto;
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
+
         #label-container {
             text-align: center;
             font-size: 1.2rem;
             font-weight: bold;
             color: #3C6E71;
         }
+
         footer {
             margin-top: 20px;
             font-size: 0.9rem;
             color: #555;
         }
+
         .geometric-lines {
             position: absolute;
             top: 0;
@@ -101,7 +104,6 @@
     </header>
 
     <main>
-        <select id="camera-select"></select>
         <button class="start-btn" onclick="init()">Start Yoga Detection</button>
         <div><canvas id="canvas"></canvas></div>
         <div id="label-container">Detected Asana will appear here</div>
@@ -117,7 +119,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
     <script>
         const URL = "./my_model/";
-        let model, webcam, ctx, labelContainer, maxPredictions, currentStream;
+        let model, webcam, ctx, labelContainer, maxPredictions;
 
         async function init() {
             const modelURL = URL + "model.json";
@@ -129,18 +131,9 @@
 
                 const size = 300;
                 const flip = true;
-                const cameraSelect = document.getElementById("camera-select");
-                const videoDevices = await getVideoDevices();
-                videoDevices.forEach((device) => {
-                    const option = document.createElement("option");
-                    option.value = device.deviceId;
-                    option.text = device.label || `Camera ${cameraSelect.length + 1}`;
-                    cameraSelect.add(option);
-                });
-
                 webcam = new tmPose.Webcam(size, size, flip);
-                await setCamera(cameraSelect.value);
-
+                await webcam.setup();
+                await webcam.play();
                 window.requestAnimationFrame(loop);
 
                 const canvas = document.getElementById("canvas");
@@ -148,30 +141,10 @@
                 canvas.height = size;
                 ctx = canvas.getContext("2d");
                 labelContainer = document.getElementById("label-container");
-
-                cameraSelect.addEventListener("change", async () => {
-                    await setCamera(cameraSelect.value);
-                });
             } catch (error) {
                 console.error("Error loading model or setting up webcam:", error);
                 alert("Error loading model. Check console for details.");
             }
-        }
-
-        async function getVideoDevices() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            return devices.filter((device) => device.kind === "videoinput");
-        }
-
-        async function setCamera(deviceId) {
-            if (currentStream) {
-                currentStream.getTracks().forEach((track) => track.stop());
-            }
-            currentStream = await navigator.mediaDevices.getUserMedia({
-                video: { deviceId: { exact: deviceId } },
-            });
-            webcam.stream = currentStream;
-            await webcam.play();
         }
 
         async function loop() {

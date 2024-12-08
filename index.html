@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Pose Detection</title>
+    <title>AI Yoga Aasana Detection Model</title>
     <style>
         /* General Styles */
         body {
@@ -144,12 +144,12 @@
     </header>
 
     <main>
-        <button class="start-btn" onclick="init()">Start Yoga Detection</button>
-        <div id="loading-container" class="loading-message" style="display: none;">Loading model...</div>
+        <button class="start-btn" onclick="init()">Start Yoga Aasana Detection</button>
+        <div id="loading-container" class="loading-message" style="display: none;">Loading AI model...</div>
         <div><canvas id="canvas"></canvas></div>
         <div id="label-container">Detected Asana will appear here</div>
         <div class="info-link">
-            <a href="https://www.mea.gov.in/yoga-postures-17.htm" target="_blank">Learn More About Yoga Poses</a>
+            <a href="https://www.mea.gov.in/yoga-postures-17.htm" target="_blank">CLICK HERE to Learn More About Yoga Aasanas</a>
         </div>
     </main>
 
@@ -174,7 +174,7 @@
             try {
                 // Display loading message
                 loadingContainer.style.display = "block";
-                loadingContainer.innerText = "Loading model...";
+                loadingContainer.innerText = "Loading AI model...";
 
                 model = await tmPose.load(modelURL, metadataURL);
                 maxPredictions = model.getTotalClasses();
@@ -222,7 +222,7 @@
                     labelContainer.innerHTML = "No confident asana detected.";
                 }
             } else {
-                labelContainer.innerHTML = "No human pose detected.";
+                labelContainer.innerHTML = "No human detected.";
             }
 
             drawPose(pose);

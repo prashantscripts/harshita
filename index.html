@@ -3,22 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Pose Detection</title>
+    <title>Yoga Pose Detection</title>
     <style>
+        /* General Styles */
         body {
             font-family: 'Roboto', sans-serif;
             margin: 0;
-            background-color: #F0F4F8;
+            background: linear-gradient(135deg, #EAFDFC, #FFFDFB);
             color: #333;
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow-x: hidden;
         }
 
+        /* Header Styling */
         header {
             width: 100%;
-            background: linear-gradient(135deg, #E8F1F2, #C2E7D9);
-            padding: 10px 0; /* Adjust padding for mobile */
+            background: linear-gradient(135deg, #6EC1E4, #8EE5B1);
+            padding: 15px 0;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -27,17 +30,22 @@
         }
 
         header img {
-            max-height: 120px; /* Scaled for smaller screens */
-            height: auto; /* Responsive scaling */
-            display: block;
-            margin: 0 auto;
+            max-height: 100px;
+            height: auto;
+            transition: transform 0.3s ease;
         }
 
+        header img:hover {
+            transform: scale(1.1);
+        }
+
+        /* Main Content Styling */
         main {
             width: 90%;
             max-width: 800px;
             margin: 20px auto;
-            background: white;
+            background: linear-gradient(135deg, #FFFFFF, #F1FAEE);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             padding: 20px;
@@ -48,17 +56,18 @@
             padding: 15px 20px;
             font-size: 1rem;
             font-weight: bold;
-            background: #4D96B8;
+            background: linear-gradient(135deg, #FF8360, #FFB677);
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             margin-bottom: 20px;
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, transform 0.2s ease;
         }
 
         button.start-btn:hover {
-            background: #3B7A9E;
+            background: linear-gradient(135deg, #FFB677, #FF8360);
+            transform: translateY(-2px);
         }
 
         #canvas {
@@ -72,46 +81,77 @@
             text-align: center;
             font-size: 1.2rem;
             font-weight: bold;
-            color: #3C6E71;
+            color: #4D96B8;
         }
 
-        footer {
+        .loading-message {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #FF8360;
+            margin: 10px 0;
+            text-align: center;
+            animation: blink 1s linear infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Link Styling */
+        .info-link {
             margin-top: 20px;
-            font-size: 0.9rem;
-            color: #555;
+            text-align: center;
         }
 
-        .geometric-lines {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: -1;
-            background: repeating-linear-gradient(
-                -45deg,
-                rgba(200, 230, 230, 0.1),
-                rgba(200, 230, 230, 0.1) 10px,
-                rgba(180, 200, 200, 0.05) 10px,
-                rgba(180, 200, 200, 0.05) 20px
-            );
+        .info-link a {
+            font-size: 1rem;
+            color: #FF8360;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .info-link a:hover {
+            color: #4D96B8;
+        }
+
+        /* Media Queries */
+        @media (max-width: 768px) {
+            header img {
+                max-height: 70px;
+            }
+
+            button.start-btn {
+                font-size: 0.9rem;
+                padding: 12px 18px;
+            }
+
+            #label-container {
+                font-size: 1rem;
+            }
+
+            .info-link a {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
 <body>
     <header>
-        <img src="./my_model/logo.png" alt="Logo Banner">
+        <img id="logo" src="./my_model/logo.svg" alt="Logo Banner">
     </header>
 
     <main>
         <button class="start-btn" onclick="init()">Start Yoga Detection</button>
+        <div id="loading-container" class="loading-message" style="display: none;">Loading model...</div>
         <div><canvas id="canvas"></canvas></div>
         <div id="label-container">Detected Asana will appear here</div>
+        <div class="info-link">
+            <a href="https://www.mea.gov.in/yoga-postures-17.htm" target="_blank">Learn More About Yoga Poses</a>
+        </div>
     </main>
-
-    <div class="geometric-lines"></div>
-
- 
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
@@ -119,13 +159,28 @@
         const URL = "./my_model/";
         let model, webcam, ctx, labelContainer, maxPredictions;
 
+        // Dynamically load a different logo for mobile and desktop
+        window.onload = () => {
+            const logo = document.getElementById("logo");
+            const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+            logo.src = isMobile ? "./my_model/logo_mobile.svg" : "./my_model/logo_desktop.svg";
+        };
+
         async function init() {
+            const loadingContainer = document.getElementById("loading-container");
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
 
             try {
+                // Display loading message
+                loadingContainer.style.display = "block";
+                loadingContainer.innerText = "Loading model...";
+
                 model = await tmPose.load(modelURL, metadataURL);
                 maxPredictions = model.getTotalClasses();
+
+                // Update loading message
+                loadingContainer.innerText = "Setting up webcam...";
 
                 const size = 300;
                 const flip = true;
@@ -139,9 +194,12 @@
                 canvas.height = size;
                 ctx = canvas.getContext("2d");
                 labelContainer = document.getElementById("label-container");
+
+                // Hide loading message
+                loadingContainer.style.display = "none";
             } catch (error) {
                 console.error("Error loading model or setting up webcam:", error);
-                alert("Error loading model. Check console for details.");
+                loadingContainer.innerText = "Error loading model. Check console for details.";
             }
         }
 
